@@ -1,1 +1,2 @@
 src/c/vendor/configure/* text eol=lf
+.github/workflows/*.sh text eol=lf

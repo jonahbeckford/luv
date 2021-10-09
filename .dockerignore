@@ -1,0 +1,10 @@
+# Exclude all files except those that start with an exclamation point (!)
+*
+!dune-project
+!*.opam
+!Makefile
+!.git/
+!.github/
+!src/
+!test/
+!example/

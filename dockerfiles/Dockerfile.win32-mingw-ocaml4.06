@@ -1,0 +1,45 @@
+# Build and test luv in Windows using OCaml 4.06 and Cygwin MinGW compiler.
+#
+# Usage
+# -----
+#
+# PS luv> docker build --pull --rm -f "dockerfiles/Dockerfile.win32-mingw-ocaml4.06" -t luv:4.06-latest "."
+# PS luv> docker run -it luv:4.06-latest
+# C:\home\opam\project> opam exec -- dune build -p luv
+# C:\home\opam\project> opam exec -- dash -x .github/workflows/test-win32-mingw.sh
+#
+# Notes
+# -----
+#
+# * This is a Windows-based container; not a Linux-based container.
+#   You must run this from a Windows machine. Confer: https://docs.microsoft.com/en-us/virtualization/windowscontainers/about/
+# * We perform analogous steps as the GitHub Actions in .github\workflows\ci.yml
+# * luv supports 4.02+. But ocaml/opam Docker images only supports 4.06+.
+
+FROM ocaml/opam:windows-mingw-20H2-ocaml-4.06
+
+# cygsympathy causes `re-exec error: exit status 1: output: unexpected EOF` in Docker containers, so disable it
+RUN dash -c "true > /etc/postinstall/zp_zcygsympathy.sh && chmod +x /etc/postinstall/zp_zcygsympathy.sh"
+
+RUN opam depext -y conf-pkg-config
+
+# Dump GCC standard include + library paths
+RUN dash -c "/bin/true | x86_64-w64-mingw32-gcc -xc -E -v -"
+
+# Avoid Windows filesystem errors caused by ocaml/opam native symlinks ("winsymlinks:native"), like:
+#   Error: rmdir: _build/default/src/c/vendor/libuv/.libs: Directory not empty
+ENV CYGWIN="winsymlinks:lnk"
+
+# Install Opam dependencies. Sadly can't do the build or else get `re-exec error: exit status 1: output: unexpected EOF`
+COPY *.opam /home/opam/project/
+WORKDIR /home/opam/project
+RUN opam install -y --deps-only .
+RUN opam install -y --deps-only --with-test .
+
+# Copy over remaining project files necessary for building and testing (see .dockerignore for which files will be available to copy)
+COPY dune-project Makefile /home/opam/project/
+COPY .git/    /home/opam/project/.git/
+COPY .github/ /home/opam/project/.github/
+COPY src/     /home/opam/project/src/
+COPY test/    /home/opam/project/test/
+COPY example/ /home/opam/project/example/

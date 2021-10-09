@@ -30,6 +30,13 @@ jobs:
       - run: opam depext -y conf-pkg-config
       - run: opam install -y --deps-only .
       - run: opam exec -- dune build -p luv
+        env:
+          CYGWIN: "winsymlinks:lnk"
+      - if: matrix.os == 'windows-latest'
+        continue-on-error: true
+        run: |
+          opam install -y --deps-only --with-test .
+          opam exec -- dash -x .github/workflows/test-win32-mingw.sh
 
   esy:
     runs-on: ${{ matrix.os }}
